@@ -15,5 +15,20 @@
 
 ![Garbled Unicode Image](images/Garbled-Unicode.png)
 
-<p>will try other methods, if they fail too, will use OCR based</p>
+Pymupdf gives the same result
+will try tesseract
+Compared with Docling, Docling seems a better fit as it provides structural layout, lightweight and can also help extract formulas
+
+Docling with OCR is taking too much time, while without OCR, with table layout aware giving worse results than previous methods, docling was not working correctly - having MPS float64 inssue, also had to change it to use CPU
+
+Will switch to Marker-pdf as suggested by claude, Rejecting marker too RAM hungry
+
+will switch to PIL image extraction from pdf anf then pytesseract
+
+Even Pytesseract is failing to extract text like question and even text with them, tried different configuration of oem and psm, still the same results
+
+Will use OCR with Docling on google colab
+
+OCR not working, will fallback to pymupdf and try to work with garbled uniocode
+
 
