@@ -43,6 +43,12 @@ also made metadata for every book/doc
 we used characters = 4000 which is roughly 1000 tokens which exceeds the limit of BGE but we can change the threshold
 
 ### Recursive Text Splitter (Character)
+Hardcoded it, but too many chunks and shortest length of chunk is 1 and longest is 440
+to make it better we may merge if len(merged) < max chunk size
+
+hardcoding it will pose a problem, since we are using split and no overlapping, no metadata, merge small pieces
+
+so we will now use langchain's framework for the same
 
 
 ### Semantic Chunking
