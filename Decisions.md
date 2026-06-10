@@ -32,3 +32,18 @@ Will use OCR with Docling on google colab
 OCR not working, will fallback to pymupdf and try to work with garbled uniocode
 
 
+## Chunking -
+
+### splitting by characters manually 
+
+splitting by characters only made too much junk, removed Table of Content using density filter coded customly
+
+also made metadata for every book/doc
+
+we used characters = 4000 which is roughly 1000 tokens which exceeds the limit of BGE but we can change the threshold
+
+### Recursive Text Splitter (Character)
+
+
+### Semantic Chunking
+will try after getting retrieval set up 
