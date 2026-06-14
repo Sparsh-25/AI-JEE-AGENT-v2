@@ -1,45 +1,43 @@
 from pathlib import Path
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from dataclasses import dataclass, asdict
+from pathlib import Path
+import json
 
-def chunking(text, seperator=["\n\n", "\n", " ", ""], chunk_size =512 ):
+@dataclass
+class Chunks:
+    chunk_id : int
+    text: str
+    source: str   
 
-    if len(text) <= chunk_size:
-        return [text]
-    if not seperator or seperator[0] == "":
-        forced=[]
-        for i in range(0, len(text), chunk_size):
-            chunk  = text[i:i+chunk_size]
-            if len(chunk) > 50:
-                forced.append(chunk)
+def write_chunks(chunks, path):
+    with open(path, "w", encoding="utf-8") as f:
+        for c in chunks:
+            f.write(json.dumps(asdict(c), ensure_ascii=False) + "\n")
 
-        return forced
-
-    else:
-        current_step = seperator[0]
-        remaining_steps = seperator[1:]
-
-        split = text.split(current_step)
-        chunks = []
-
-        for piece in split:
-
-            if not piece.strip():
-                continue
-
-            if len(piece) <= chunk_size:
-                chunks.append(piece)
-            else:
-                chunk = chunking(piece, remaining_steps, chunk_size)
-                chunks.extend(chunk)
+def read_chunks(path):
+    return [Chunks(**json.loads(line)) for line in open(path, encoding="utf-8")]
 
 
-        return chunks
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=512,
+    chunk_overlap=50,
+    length_function=len,
+    is_separator_regex=False
+    )
 
-output_dir = Path("Chunk")
-
+output_dir = Path("chunks")
+output_dir.mkdir(exist_ok=True)
 docs = Path("output")
 
 for doc in docs.glob("*.txt"):
 
     text = doc.read_text()
-    chunk = chunking(text)
+    chunk = text_splitter.create_documents([text])
+
+    for i in range(len(chunk)):
+        chunk[i] = Chunks(i, chunk[i].page_content, doc.stem)
+    
+    write_chunks(chunk, output_dir / f"{doc.stem}.jsonl")
+
     print("done")
