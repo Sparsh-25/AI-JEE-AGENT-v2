@@ -32,7 +32,10 @@ Will use OCR with Docling on google colab
 OCR not working, will fallback to pymupdf and try to work with garbled uniocode
 
 
-## Chunking -
+Fixed some things, removed table of contents, appendix etc, and junk lines by defining them manually and scanning through the text before writing them in .txt file
+
+
+### Chunking -
 
 ### splitting by characters manually 
 
@@ -50,6 +53,23 @@ hardcoding it will pose a problem, since we are using split and no overlapping, 
 
 so we will now use langchain's framework for the same
 
+Changed the source of data, works fine now
+
+fixed few bugs in chunking, was taking len() which counts characters not tokens so used tokenizer from transformers for count function
+Removed pages like table of content, used filter to drop chunk below 20 character count
 
 ### Semantic Chunking
 will try after getting retrieval set up 
+
+
+
+### Embeddings
+
+Chose asymmetric bge-en embedding model, wrote from transformers module. (need to check metrics for both asymmetric and symmetric)
+
+Changed the data from ncert to openstax.org physics and chemistry volumes since extracted content was better unlike NCERT where the garbled unicode formed useless chunks and embeddings and was taking to time to embed them
+Output for NCERT was 100 in token, useless
+
+set the threshold for retrieval 0.6 by running a few queries
+
+will calculate MRR and other metrics and completing the LLM integration part with rerankers
