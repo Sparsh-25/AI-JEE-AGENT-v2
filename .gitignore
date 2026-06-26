@@ -4,3 +4,6 @@ venv/
 output/
 chunks/
 embeddings/
+__pycache__/
+.env
+

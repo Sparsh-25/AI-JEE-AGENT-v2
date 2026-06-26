@@ -72,4 +72,25 @@ Output for NCERT was 100 in token, useless
 
 set the threshold for retrieval 0.6 by running a few queries
 
-will calculate MRR and other metrics and completing the LLM integration part with rerankers
+todo: 1. will calculate MRR and other metrics.
+
+
+### Reranker
+used BGE base reranker for reranking, taking top 20 chunks from from encoder and then reranking to dcreasingly and sending all chunks
+Set up reranker from scratch from transformers module
+
+## todo : 1. Make top Chunks reranked to 5 instead of 20   
+
+
+### LLM INTEGRATION
+Set up Groq 70B versatile model for LLM answer
+gave context/chunks to LLM with different structure for chunks - block of a single context/chunk, example - chunk 1| chunk_id 100 | chunk_souce - book | chunk text
+giving to LLM after reranking
+
+## Todo: 1. Eval Metrics and best prompt eval and compare answers to eval data set
+
+
+### Wrappers and API function
+
+## todo: 1. defining token limit, context window, logging, retrying token counting and timeout
+      2. Study these functions and implmentations

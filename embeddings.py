@@ -42,7 +42,7 @@ def encode(text, mode='chunk'):
     return embedding
 
 
-def retrieve(query, k=5, threshold=0.6):
+def retrieve(query, k=20, threshold=0.55):
 
     query_vec = encode([query], mode = 'query')[0].cpu().numpy()
 
@@ -50,7 +50,7 @@ def retrieve(query, k=5, threshold=0.6):
 
     top = np.argpartition(-score, k)[:k]      # the k highest-scoring indices (unordered)
     top = top[np.argsort(-score[top])]        # sort those k by score, descending
-    return [(float(score[i]), chunks[i]) for i in top ]  #if score[i] >= threshold to put
+    return [(float(score[i]), chunks[i]) for i in top if score[i] >= threshold] 
 
 
 def encode_all():
@@ -95,4 +95,4 @@ out_dir = Path('embeddings')
 # print(retrieve("how do I bake chocolate chip cookies")) # 0.5 around
 
 
-encode_all()
+# encode_all()
