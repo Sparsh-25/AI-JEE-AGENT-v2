@@ -34,7 +34,7 @@ for pdf_path in data_dir.glob("*.pdf"):
         kept = [line for line in lines if line.strip() not in JUNK_LINES]
         text = "\n".join(kept)
 
-        full_text.append(text)
+        full_text.append(f"<<<PAGE {i+1}>>>\n{text}")
 
         print(f"Done with page {i+1}/{len(doc)}")
         print(f"Pages left: {len(doc) - i - 1}")

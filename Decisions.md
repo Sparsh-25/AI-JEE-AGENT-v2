@@ -37,6 +37,12 @@ Fixed some things, removed table of contents, appendix etc, and junk lines by de
 
 ### Chunking -
 
+Every chunk was given id starting from 0 and common to all chunks irrespective of books they came from unlike before
+
+added page number and source in meta
+
+Changed this both for quicker and easier debugging
+
 ### splitting by characters manually 
 
 splitting by characters only made too much junk, removed Table of Content using density filter coded customly
@@ -58,6 +64,7 @@ Changed the source of data, works fine now
 fixed few bugs in chunking, was taking len() which counts characters not tokens so used tokenizer from transformers for count function
 Removed pages like table of content, used filter to drop chunk below 20 character count
 
+
 ### Semantic Chunking
 will try after getting retrieval set up 
 
@@ -70,16 +77,14 @@ Chose asymmetric bge-en embedding model, wrote from transformers module. (need t
 Changed the data from ncert to openstax.org physics and chemistry volumes since extracted content was better unlike NCERT where the garbled unicode formed useless chunks and embeddings and was taking to time to embed them
 Output for NCERT was 100 in token, useless
 
-set the threshold for retrieval 0.6 by running a few queries
+We set the threshold for retrieval 0.6 by running a few queries and testing on small chunks and test set
 
-todo: 1. will calculate MRR and other metrics.
+## todo: 1. will calculate MRR and other metrics.
 
 
 ### Reranker
 used BGE base reranker for reranking, taking top 20 chunks from from encoder and then reranking to dcreasingly and sending all chunks
 Set up reranker from scratch from transformers module
-
-## todo : 1. Make top Chunks reranked to 5 instead of 20   
 
 
 ### LLM INTEGRATION
@@ -92,9 +97,19 @@ giving to LLM after reranking
 
 ## Todo: 1. Eval Metrics and best prompt eval and compare answers to eval data set
          2. Calculate and find the token length of our total prompt combined since context window includes input+ouput and format according to that
+         3. Convert this into an agent with routing and tools (Math, theoru, syllabus, Online web search)
 
 
 ### Wrappers and API function (Resilience and Observability)
 
 ## todo: 1. defining token limit, context window, logging, retrying token counting and timeout
       2. Study these functions and implmentations
+
+
+ ### Guardrails
+
+Set up guardrails 
+for Input - prompt injection, bad words, empty messages and length check returning Not allowed 
+For Output - Matching if chunk ids cited by LLM and given to it are same and letting the user if it hallucinated
+ 
+### Backend and Deployment

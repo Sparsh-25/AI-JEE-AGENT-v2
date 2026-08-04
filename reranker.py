@@ -10,6 +10,9 @@ def rerank(query):
 
     retrieved = retrieve(query)
 
+    if not retrieved:
+        return []
+
     chunks=[0]*len(retrieved)
     for j in range(len(retrieved)):
         chunks[j] = [query, retrieved[j][1]['text']]
@@ -21,12 +24,11 @@ def rerank(query):
         reranked_chunks = list(zip([s.item() for s in scores], [t[1] for t in retrieved]))
 
     sorted_ranks = sorted(reranked_chunks, key = lambda pair: pair[0], reverse=True)
-    return sorted_ranks
+    return sorted_ranks[:5]
 
-            
 
-query = "what is organic chemistry and carbon mono dioxide?"
 
-reranked = rerank(query)
-
-# print(reranked)
+if __name__ == "__main__":
+    query = "what is organic chemistry and carbon mono dioxide?"
+    reranked = rerank(query)
+    print(reranked)

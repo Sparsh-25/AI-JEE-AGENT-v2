@@ -84,15 +84,18 @@ def encode_all():
 
 embedded = np.load('embeddings/embeddings.npy')
 chunks = json.load(open("embeddings/chunks.json"))
+assert len(chunks) == embedded.shape[0], (
+    f"Mismatch: {len(chunks)} chunks vs {embedded.shape[0]} embeddings. "
+    f"Re-run encode_all()."
+)
 
 input_dir = Path('chunks')
 
 out_dir = Path('embeddings')
 
 
-# print(retrieve("what is Newton's second law")) # 0.7 around
-# print(retrieve("how many hydrogen atoms in haloalkene and mehtylamine")) 0.6
-# print(retrieve("how do I bake chocolate chip cookies")) # 0.5 around
-
-
-# encode_all()
+if __name__ == "__main__":
+    # print(retrieve("what is Newton's second law")) # 0.7 around
+    # print(retrieve("how many hydrogen atoms in haloalkene and mehtylamine")) # 0.6
+    # print(retrieve("how do I bake chocolate chip cookies")) # 0.5 around
+    encode_all() # use only when encoding chunks

@@ -150,7 +150,7 @@ pip install -r requirements.txt
 Create a `.env` file in the project root:
 
 ```
-GROQ_API_KEY=your-key-here
+API_KEY=your-key-here
 ```
 
 Run the pipeline in order (each stage writes artifacts the next stage reads):

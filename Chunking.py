@@ -1,8 +1,8 @@
 from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from dataclasses import dataclass, asdict
-from pathlib import Path
 import json
+import re
 
 from transformers import AutoTokenizer
 tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-base-en-v1.5')
@@ -11,7 +11,8 @@ tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-base-en-v1.5')
 class Chunks:
     chunk_id : int
     text: str
-    source: str   
+    source: str
+    page: int
 
 def write_chunks(chunks, path):
     with open(path, "w", encoding="utf-8") as f:
@@ -32,21 +33,26 @@ output_dir = Path("chunks")
 output_dir.mkdir(exist_ok=True)
 docs = Path("output")
 
+cid=0
 for doc in docs.glob("*.txt"):
 
     text = doc.read_text()
-    chunk = text_splitter.create_documents([text])
+    segments = re.split(r'<<<PAGE (\d+)>>>', text) # The list alternates: number, text, number, text, number, text.
 
     kept = []
-    cid=0
 
-    for i in range(len(chunk)):
-        if len(chunk[i].page_content.strip()) < 20:
-            continue
+    for j in range(1, len(segments), 2): # two steps because alternate format and from 1 because junk/whitespaces
+        page_num = int(segments[j])
+        page_text = segments[j + 1]
 
-        kept.append(Chunks(cid, chunk[i].page_content, doc.stem))
-        cid +=1
-    
+        page_chunks = text_splitter.create_documents([page_text])
+
+        for c in page_chunks:
+            if len(c.page_content.strip()) < 20:
+                continue
+            kept.append(Chunks(cid, c.page_content, doc.stem, page_num))
+            cid += 1
+
     write_chunks(kept, output_dir / f"{doc.stem}.jsonl")
 
-    print("done")
+    print(f"done {doc.stem}: {len(kept)} chunks")

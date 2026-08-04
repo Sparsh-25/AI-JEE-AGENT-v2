@@ -2,6 +2,7 @@ import os
 from groq import Groq
 from dotenv import load_dotenv
 from reranker import rerank
+from guardrails import validate_query, validate_response
 
 load_dotenv()
 
@@ -9,24 +10,35 @@ client = Groq(
     api_key=os.environ.get("API_KEY"),
 )
 
-query = "what is organic chem"
-
-chunks = rerank(query)
-
-context = []
-for i in range(len(chunks)):
-
-    context.append([i+1, chunks[i][1]])
 
 
-
-blocks = []
-for i, pair in enumerate(context):
-    block = f"Chunk-{i+1} | chunk_id {pair[1]['chunk_id']} | source {pair[1]['source']}\n{pair[1]['text']}"
-    blocks.append(block)
-joined = "\n\n".join(blocks)
 
 def response(query):
+
+    refusal = validate_query(query)
+
+    if refusal:
+        return 'Not Allowed (Possibly Misuse/Prompt Injection/Banned Words)'
+
+    chunks = rerank(query)
+
+    if not chunks:
+        return "I don't have relevant material in my sources, if something's missing, mail us at -"
+
+    context = []
+    for i in range(len(chunks)):
+
+        context.append([i+1, chunks[i][1]])
+
+
+
+    blocks = []
+    chunk_id = []
+    for i, pair in enumerate(context):
+        block = f"Chunk-{i+1} | chunk_id {pair[1]['chunk_id']} | source {pair[1]['source']}\n{pair[1]['text']}"
+        blocks.append(block)
+        chunk_id.append(pair[1]['chunk_id'])
+    joined = "\n\n".join(blocks)
 
     chat_completion = client.chat.completions.create(
         messages=[
@@ -42,7 +54,17 @@ def response(query):
         model="llama-3.3-70b-versatile"
     )
 
+    answer = chat_completion.choices[0].message.content
+
+    
+    result = validate_response(answer, chunk_id)
+
+    if not result:
+        return answer + ' \n THIS MAY BE A HALLUCINATED ANSWER SINCE EITHER NO CHUNK ID OR WRONG CHUNK ID'
+
+    return answer
 
 
 
-# print(context)
+if __name__ == '__main__':
+    print(response('what is electron'))
