@@ -111,11 +111,11 @@ With every extraction path dead against NCERT, the diagnosis shifted from *tooli
 
 - [ ] Retrieval evaluation: MRR and related metrics on a labeled query set
 - [ ] Compare asymmetric vs. symmetric BGE variants with metrics
-- [ ] Cap reranked context at top-5 chunks (currently passing all 20)
 - [ ] Prompt evaluation: compare answer quality across prompt structures against an eval dataset
 - [ ] Measure total prompt token length (input + output share the context window) and budget accordingly
 - [ ] Semantic chunking experiment (post-retrieval-baseline)
 - [ ] Full resilience layer: token limits, logging, retry with backoff, timeouts
+- [ ] Backend and deployment
 
 ---
 
