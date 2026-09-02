@@ -114,3 +114,5 @@ For Output - Matching if chunk ids cited by LLM and given to it are same and let
  
 ### Backend and Deployment
 All fastapi and every not in async per time query after first query 
+
+I measured where the bottleneck actually is under concurrent load CPU compute in the reranker, not thread availability and async only addresses the second one. Converting to async would add real complexity (a new client, wrapping blocking calls, re-testing everything) to fix a problem I don't have at the traffic I'm actually serving. I'd revisit it if a load test ever showed requests queuing for threads specifically — that's the condition that would justify it, and I haven't seen that condition
