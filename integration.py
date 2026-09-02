@@ -76,6 +76,7 @@ def response(query):
         }
     ]
     before_api_call_time = time.perf_counter()
+    print(f"starting api call at {before_api_call_time} for query {query}")
     chat_completion = call_llm(messages)
     api_response_elapse = time.perf_counter() - before_api_call_time
     print(f"API call response time {api_response_elapse} seconds")

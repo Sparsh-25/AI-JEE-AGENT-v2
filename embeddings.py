@@ -43,10 +43,10 @@ def encode(text, mode='chunk'):
     return embedding
 
 
-def retrieve(query, k=20, threshold=0.55):
+def retrieve(query, k=10, threshold=0.55):
     
     start = time.perf_counter()
-
+    print(f"starting retrieval at {start} for query {query}")
     query_vec = encode([query], mode = 'query')[0].cpu().numpy()
 
     score = embedded @ query_vec

@@ -17,6 +17,8 @@ def rerank(query):
 
     start = time.perf_counter()
 
+    print(f"starting rerank at {start} for query {query}")
+
     chunks=[0]*len(retrieved)
     for j in range(len(retrieved)):
         chunks[j] = [query, retrieved[j][1]['text']]
