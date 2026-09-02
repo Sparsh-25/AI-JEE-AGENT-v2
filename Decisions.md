@@ -113,3 +113,4 @@ for Input - prompt injection, bad words, empty messages and length check returni
 For Output - Matching if chunk ids cited by LLM and given to it are same and letting the user if it hallucinated
  
 ### Backend and Deployment
+All fastapi and every not in async per time query after first query 

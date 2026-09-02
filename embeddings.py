@@ -4,6 +4,7 @@ import torch
 from pathlib import Path
 import json
 import numpy as np
+import time
 
 if torch.mps.is_available():
     device = 'mps'
@@ -43,13 +44,18 @@ def encode(text, mode='chunk'):
 
 
 def retrieve(query, k=20, threshold=0.55):
+    
+    start = time.perf_counter()
 
     query_vec = encode([query], mode = 'query')[0].cpu().numpy()
 
     score = embedded @ query_vec
-
     top = np.argpartition(-score, k)[:k]      # the k highest-scoring indices (unordered)
-    top = top[np.argsort(-score[top])]        # sort those k by score, descending
+    top = top[np.argsort(-score[top])]     # sort those k by score, descending
+
+    ret_elapsed = time.perf_counter() - start
+    print(f"Retrieval elapsed in {ret_elapsed} seconds")  
+    
     return [(float(score[i]), chunks[i]) for i in top if score[i] >= threshold] 
 
 

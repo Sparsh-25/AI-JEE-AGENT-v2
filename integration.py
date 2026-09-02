@@ -5,6 +5,7 @@ from reranker import rerank
 from guardrails import validate_query, validate_response
 import time
 from groq import RateLimitError, BadRequestError, APITimeoutError, APIStatusError
+import time
 
 load_dotenv()
 
@@ -19,7 +20,7 @@ def call_llm(messages, max_retries=3):
         try:
             completion = client.chat.completions.create(
                 messages=messages,
-                model="llama-3.3-70b-versatile"
+                model="openai/gpt-oss-120b"
             )
             return completion
         except RateLimitError:
@@ -39,6 +40,8 @@ def call_llm(messages, max_retries=3):
 
 
 def response(query):
+
+    start = time.perf_counter()
 
     refusal = validate_query(query)
 
@@ -72,8 +75,10 @@ def response(query):
             "content": f"The chunks are formed as (chunk-number | chunk_id |source | chunk text) and user Query will be define by 'User Query. Context:\n\n{joined}\n\nUser Query: {query}"
         }
     ]
-
+    before_api_call_time = time.perf_counter()
     chat_completion = call_llm(messages)
+    api_response_elapse = time.perf_counter() - before_api_call_time
+    print(f"API call response time {api_response_elapse} seconds")
 
     if not chat_completion:
         return "Service is temporarily unavailable. Please try again in a moment."
