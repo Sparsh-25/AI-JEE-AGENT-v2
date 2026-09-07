@@ -4,13 +4,15 @@ from dotenv import load_dotenv
 from reranker import rerank
 from guardrails import validate_query, validate_response
 import time
-from groq import RateLimitError, BadRequestError, APITimeoutError, APIStatusError
+from groq import RateLimitError, BadRequestError, AuthenticationError, NotFoundError, APITimeoutError, APIConnectionError, APIStatusError
 import time
 
 load_dotenv()
 
 client = Groq(
     api_key=os.environ.get("API_KEY"),
+    max_retries=0,
+    timeout=30.0,
 )
 
 
@@ -29,7 +31,10 @@ def call_llm(messages, max_retries=3):
             wait = 2 ** attempt
             print(f'Rate limited, retrying in {wait}s...')
             time.sleep(wait)
-        except (APITimeoutError, APIStatusError) as e:
+        except (BadRequestError, AuthenticationError, NotFoundError) as e:
+            print(f"Non-retryable API error: {e}")
+            return None
+        except (APIConnectionError, APIStatusError) as e:
             if attempt == max_retries - 1:
                 return None
             wait = 2 ** attempt
@@ -49,6 +54,8 @@ def response(query):
         return 'Not Allowed (Possibly Misuse/Prompt Injection/Banned Words)'
 
     chunks = rerank(query)
+    print("reranked chunks ", len(chunks))
+    print([(round(s, 2), c['chunk_id']) for s, c in chunks])
 
     if not chunks:
         return "I don't have relevant material in my sources, if something's missing, mail us at -"
@@ -68,7 +75,7 @@ def response(query):
     messages = [
         {
             "role": "system",
-            "content": "You are a JEE tutor with excellence in JEE syllabus and materials, your role is not just give answers but make students undestand about the topics deeply but only with the context provided 1) you may use real world analogies 2) Break Complex topcis into manageable steps 3) Encourage critical thinking and problem solving ability regarding JEE topics 4) Always ask a follow up question for making them understand deeply and to test if they understood. 5) ALWAYS cite the source and chunk_id used in chunks for answering the user query. YOU ARE ONLY SUPPOSED TO ANSWER, IF THE ANSWER IS IN THE CHUNKS GIVEN TO YOU ELSE SAY NOT IN CHUNKS AND DON'T ASK OR SAY FOR ANYTHING ELSE"
+            "content": "You are a JEE tutor with excellence in JEE syllabus and materials, your role is not just give answers but make students undestand about the topics deeply but only with the context provided 1) you may use real world analogies 2) Break Complex topcis into manageable steps 3) Encourage critical thinking and problem solving ability regarding JEE topics 4) Always ask a follow up question for making them understand deeply and to test if they understood. 5) ALWAYS cite the source and chunk_id used in chunks for answering the user query."
         },
         {
             "role": "user",
