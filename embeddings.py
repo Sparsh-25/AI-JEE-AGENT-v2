@@ -88,16 +88,20 @@ def encode_all():
 
 
 
-embedded = np.load('embeddings/embeddings.npy')
-chunks = json.load(open("embeddings/chunks.json"))
-assert len(chunks) == embedded.shape[0], (
-    f"Mismatch: {len(chunks)} chunks vs {embedded.shape[0]} embeddings. "
-    f"Re-run encode_all()."
-)
-
 input_dir = Path('chunks')
 
 out_dir = Path('embeddings')
+out_dir.mkdir(exist_ok=True)
+
+if (out_dir / "embeddings.npy").exists():
+    embedded = np.load(out_dir / "embeddings.npy")
+    chunks = json.load(open(out_dir / "chunks.json"))
+    assert len(chunks) == embedded.shape[0], (
+        f"Mismatch: {len(chunks)} chunks vs {embedded.shape[0]} embeddings. "
+        f"Re-run encode_all()."
+    )
+else:
+    print(f"No index in {out_dir}/ — run: python embeddings.py")
 
 
 if __name__ == "__main__":
