@@ -32,7 +32,11 @@ def check_input(text: str):
 
 def validate_response(answer, chunk_id):
 
-    cited = set(int(x) for x in re.findall(r'chunk_id\s*:?\s*(\d+)', answer))
+    cited = set(int(x) for x in re.findall(r'chunk[_\s-]?ids?\b[\s\S]{0,12}?(\d+)', answer, re.IGNORECASE))
+
+    line = re.search(r'CITATIONS\s*:\s*([\d,\s]+)', answer, re.IGNORECASE)
+    if line:
+        cited |= set(int(x) for x in re.findall(r'\d+', line.group(1)))
 
     if not cited:
         return False
@@ -43,9 +47,7 @@ def validate_response(answer, chunk_id):
     return True
     
 PROMPT_INJECTION_PATTERNS = [
-    r"\bignore\s+(all|previous|above|prior)\s+instructions\b",
-    r"\bforget\s+(all|previous)\s+instructions\b",
-    r"\bdisregard\s+(the\s+)?instructions\b",
+    r"\b(ignore|forget|disregard)\b[\s\S]{0,40}?\binstructions\b",
     r"\boverride\s+(the\s+)?system\b",
     r"\bsystem\s+prompt\b",
     r"\bdeveloper\s+message\b",
@@ -53,11 +55,11 @@ PROMPT_INJECTION_PATTERNS = [
     r"\bshow\s+(your\s+)?system\s+prompt\b",
     r"\bprint\s+(your\s+)?instructions\b",
     r"\bhidden\s+prompt\b",
-    r"\bact\s+as\b",
+    r"\byou\s+(should\s+|must\s+|will\s+|can\s+|to\s+)?act\s+as\b",
+    r"\bact\s+as\s+(a\s+|an\s+)?(dan|ai|assistant|chatbot|jailbroken|unrestricted|uncensored)\b",
     r"\bpretend\s+to\s+be\b",
     r"\byou\s+are\s+now\b",
     r"\bdo\s+anything\s+now\b",
-    r"\bdan\b",
     r"\bjailbreak\b",
 ]
 
