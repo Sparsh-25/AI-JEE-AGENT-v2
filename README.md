@@ -1,6 +1,6 @@
 # AI JEE Agent v2
 
-> 🚧 **Work in progress.** This is a ground-up rebuild of the [AI JEE Agent](https://huggingface.co/spaces/) — the live demo above is **v1**. v2 is being written by hand, component by component, and is not yet complete. Current state: extraction → chunking → embeddings → reranking → LLM integration are working; evaluation and the resilience layer are in progress (see [Roadmap](#roadmap)).
+> 🚧 **Work in progress.** This is a ground-up rebuild of the [AI JEE Agent](https://huggingface.co/spaces/) — the live demo above is **v1**. v2 is being written by hand, component by component, and is not yet complete. Current state: the full pipeline — extraction → chunking → embeddings → retrieval → reranking → guardrails → LLM integration — runs end to end behind a FastAPI backend; retrieval and prompt evaluation are the remaining gaps (see [Roadmap](#roadmap)).
 
 A retrieval-augmented generation (RAG) system for answering JEE-level Physics and Chemistry questions, grounded in OpenStax textbook content. Every component in v2 is hand-rolled from `transformers` primitives before reaching for frameworks, with a decision log documenting why each choice was made (and what was rejected along the way).
 
@@ -25,16 +25,16 @@ Chunking (LangChain RecursiveCharacterTextSplitter, token-aware)
 Embeddings (BGE bi-encoder, asymmetric, MPS on Apple Silicon)
    │
    ▼
-Vector Retrieval (FAISS, cosine similarity, threshold = 0.6)
+Vector Retrieval (NumPy dot product over normalized vectors, threshold = 0.55, top-10)
    │
    ▼
-Reranking (bge-reranker-base cross-encoder, top-20 → ranked)
+Reranking (bge-reranker-base cross-encoder, top-10 → top-5 scoring above 0)
    │
    ▼
 Prompt Construction (structured chunk blocks + grounding rules)
    │
    ▼
-LLM (Groq · llama-3.3-70b-versatile · 128K context)
+LLM (Groq · openai/gpt-oss-120b · 128K context)
 ```
 
 ---
@@ -61,21 +61,32 @@ LLM (Groq · llama-3.3-70b-versatile · 128K context)
 
 - **Model:** BGE (asymmetric variant — query and passage encoded differently), implemented directly from the `transformers` module rather than a wrapper library.
 - **Hardware:** MPS acceleration on Apple Silicon (M1).
-- **Retrieval threshold:** Cosine similarity 0.6, calibrated empirically by running sample queries.
+- **Retrieval threshold:** Cosine similarity 0.55, calibrated empirically by running sample queries. On its own it is not a sufficient off-topic gate — see Reranking.
 
 ### 4. Reranking
 
 - **Model:** `bge-reranker-base` cross-encoder, set up from scratch via `transformers`.
-- **Flow:** Bi-encoder retrieves top-20 candidates → cross-encoder rescores and sorts descending → passed to the LLM.
+- **Flow:** Bi-encoder retrieves top-10 candidates → cross-encoder rescores and sorts descending → chunks scoring above 0 pass to the LLM, capped at 5.
+- **Relevance gate:** The threshold of 0 was calibrated on a 12-query sweep — on-topic chunks scored 0.57 to 7.19, off-topic scored −6.26 to −1.87. A query with nothing above 0 gets a "no relevant material" reply and never reaches the LLM.
+- **Hardware:** MPS, same as the bi-encoder.
 
 ### 5. LLM Integration
 
-- **Model:** `llama-3.3-70b-versatile` via Groq API (128K context window).
-- **Prompting:** Each retrieved chunk is passed as a structured block — `chunk N | chunk_id | source | text` — so the model can cite which context it drew from, with grounding rules to prevent answering outside the retrieved material.
+- **Model:** `openai/gpt-oss-120b` via Groq API (128K context window).
+- **Prompting:** Each retrieved chunk is passed as a structured block — `chunk N | chunk_id | source | text` — so the model can cite which context it drew from, with grounding rules to prevent answering outside the retrieved material. The reply must end with a `CITATIONS: <id>, <id>` line, which the output guardrail parses; inline `chunk_id` mentions are accepted as a fallback, since the model's inline format varies between runs.
 
-### 6. Resilience & Observability *(in progress)*
+### 6. Guardrails
 
-Custom retry/fallback wrapper around the Groq client (`max_retries=0` on the SDK so custom logic owns retry behavior), with planned token counting, timeout handling, and logging.
+- **Input:** Empty and over-length queries are rejected, alongside regex screens for prompt injection, off-syllabus misuse, and offensive language. Patterns are anchored to persona-switching phrasing rather than bare keywords, so subject vocabulary survives — "acids act as proton donors" is a chemistry question, not a jailbreak. Current test set: 13/13 attacks blocked, 0/10 legitimate JEE queries blocked.
+- **Output:** The chunk_ids the model cites are intersected with the ids it was given. No overlap means the answer is served with a hallucination warning appended.
+
+### 7. Resilience & Observability
+
+Custom retry/fallback wrapper around the Groq client — `max_retries=0` and `timeout=30s` on the SDK so the custom loop owns retry behavior, with exponential backoff across 3 attempts.
+
+Errors are split by whether a retry can help. `BadRequestError`, `AuthenticationError` and `NotFoundError` return immediately with the real reason logged; rate limits, 5xx, timeouts and connection failures are retried. Each stage logs its latency and every call logs token usage.
+
+Still planned: structured logging and an explicit token budget.
 
 ---
 
@@ -102,8 +113,9 @@ With every extraction path dead against NCERT, the diagnosis shifted from *tooli
 | Approach | Verdict | Reason |
 |---|---|---|
 | **Manual character splitter** | ❌ Rejected | No overlap, no metadata, degenerate chunk sizes (1–440 chars) |
+| **FAISS / vector DB** | ❌ Not adopted | 5,202 chunks × 768 dims is a single dot product per query, sub-millisecond in NumPy. An index adds a dependency and a build step for no measurable gain at this corpus size. |
 
-**Final stack:** PyMuPDF + custom filtering on OpenStax → LangChain recursive splitting → BGE + FAISS → bge-reranker-base → Groq.
+**Final stack:** PyMuPDF + custom filtering on OpenStax → LangChain recursive splitting → BGE + NumPy vector search → bge-reranker-base → Groq.
 
 ---
 
@@ -112,10 +124,13 @@ With every extraction path dead against NCERT, the diagnosis shifted from *tooli
 - [ ] Retrieval evaluation: MRR and related metrics on a labeled query set
 - [ ] Compare asymmetric vs. symmetric BGE variants with metrics
 - [ ] Prompt evaluation: compare answer quality across prompt structures against an eval dataset
-- [ ] Measure total prompt token length (input + output share the context window) and budget accordingly
 - [ ] Semantic chunking experiment (post-retrieval-baseline)
-- [ ] Full resilience layer: token limits, logging, retry with backoff, timeouts
-- [ ] Backend and deployment
+- [x] Resilience layer: retry with backoff, timeouts, non-retryable error handling
+- [ ] Token limits and structured logging — usage is measured per call (~2,300–2,500 prompt, ~1,000–1,600 completion) but not yet budgeted
+- [x] Backend: FastAPI + minimal chat frontend
+- [ ] Rate limiting, and a health check that verifies the index is loaded
+- [ ] Deployment
+- [ ] Router: maths and calculation via an external library, physics/chemistry theory, syllabus lookup
 
 ---
 
@@ -126,15 +141,19 @@ AI-JEE-Agent/
 ├── Extraction.py        # PDF → cleaned .txt (PyMuPDF + junk-line filtering)
 ├── Chunking.py          # Token-aware recursive splitting + metadata
 ├── embeddings.py        # BGE encoding → embeddings.npy + chunks.json
-├── reranker.py          # Cross-encoder rescoring (bge-reranker-base)
+├── reranker.py          # Cross-encoder rescoring + relevance gate
+├── guardrails.py        # Input screening + output citation check
 ├── integration.py       # Retrieval → rerank → prompt → Groq LLM
+├── app.py               # FastAPI backend (/, /health, /chat)
+├── index.html           # Minimal chat frontend
 ├── Decisions.md         # Raw decision log (full trial-and-error history)
+├── state.md             # Running notes: open bugs, latency measurements
 ├── data/                # Source PDFs (OpenStax)
 ├── chunks/              # Chunked corpus
 ├── embeddings/
 │   ├── chunks.json      # Chunk texts + metadata (parallel to embeddings)
 │   └── embeddings.npy   # Precomputed BGE vectors
-├── output/              # Generated answers / run artifacts
+├── output/              # Extracted plain text, one .txt per source PDF
 └── images/              # Documentation assets
 ```
 
@@ -159,11 +178,19 @@ Run the pipeline in order (each stage writes artifacts the next stage reads):
 python Extraction.py     # data/ PDFs → cleaned text
 python Chunking.py       # text → chunks/
 python embeddings.py     # chunks → embeddings/embeddings.npy + chunks.json
-python integration.py    # ask questions: retrieve → rerank → answer
+python integration.py    # ask a question from the CLI
 ```
+
+Then start the server:
+
+```bash
+uvicorn app:app --reload
+```
+
+The chat frontend is served at `http://127.0.0.1:8000/`.
 
 ---
 
 ## Tech Stack
 
-**Extraction:** PyMuPDF · **Chunking:** LangChain, HuggingFace tokenizers · **Embeddings:** BGE (bi-encoder) · **Retrieval:** FAISS · **Reranking:** bge-reranker-base (cross-encoder) · **LLM:** Groq (llama-3.3-70b-versatile) · **Serving:** FastAPI, Docker, Hugging Face Spaces
+**Extraction:** PyMuPDF · **Chunking:** LangChain, HuggingFace tokenizers · **Embeddings:** BGE (bi-encoder) · **Retrieval:** NumPy dot product · **Reranking:** bge-reranker-base (cross-encoder) · **LLM:** Groq (openai/gpt-oss-120b) · **Serving:** FastAPI, Uvicorn (Docker and Hugging Face Spaces deployment still to do)
