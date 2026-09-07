@@ -1,14 +1,15 @@
 import torch
-from embeddings import retrieve
+from embeddings import retrieve, device
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 import time
 
 tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-reranker-base')
 model = AutoModelForSequenceClassification.from_pretrained('BAAI/bge-reranker-base')
+model.to(device)
 model.eval()
 
-def rerank(query):
+def rerank(query, threshold=0):
 
     retrieved = retrieve(query)
 
@@ -25,6 +26,7 @@ def rerank(query):
     
     with torch.no_grad():
         inputs = tokenizer(chunks, padding=True, truncation=True, return_tensors='pt', max_length=512)
+        inputs = inputs.to(device)
         scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
 
         reranked_chunks = list(zip([s.item() for s in scores], [t[1] for t in retrieved]))
@@ -33,7 +35,7 @@ def rerank(query):
 
     rerank_elapsed  = time.perf_counter() - start
     print(f"Reranker elapsed in {rerank_elapsed} seconds")
-    return sorted_ranks[:5]
+    return [pair for pair in sorted_ranks[:5] if pair[0] > threshold]
 
 
 
