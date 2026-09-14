@@ -41,7 +41,7 @@ for doc in docs.glob("*.txt"):
 
     kept = []
 
-    for j in range(1, len(segments), 2): # two steps because alternate format and from 1 because junk/whitespaces
+    for j in range(1, len(segments), 2): # two steps because alternate format and from 1 because junk/whitespace
         page_num = int(segments[j])
         page_text = segments[j + 1]
 
