@@ -34,7 +34,7 @@ def validate_response(answer, chunk_id):
 
     cited = set(int(x) for x in re.findall(r'chunk[_\s-]?ids?\b[\s\S]{0,12}?(\d+)', answer, re.IGNORECASE))
 
-    line = re.search(r'CITATIONS\s*:\s*([\d,\s]+)', answer, re.IGNORECASE)
+    line = re.search(r'CITATIONS\s*:\s*([^\n]+)', answer, re.IGNORECASE)
     if line:
         cited |= set(int(x) for x in re.findall(r'\d+', line.group(1)))
 
@@ -45,6 +45,10 @@ def validate_response(answer, chunk_id):
         return False
     
     return True
+
+def validate_answer(answer):
+
+    return bool(re.search(r'ANSWER\s*:\s*\S', answer))
     
 PROMPT_INJECTION_PATTERNS = [
     r"\b(ignore|forget|disregard)\b[\s\S]{0,40}?\binstructions\b",

@@ -50,7 +50,8 @@ def read_route(completion):
         'subject': args['subject'],
         'calculation': bool(args.get('calculation')),
         'concept': args.get('concept') or '',
-        'retrieval': args['route'] == 'question' and args['subject'] in ('physics', 'chemistry')
+        'retrieval': args['route'] == 'question' and args['subject'] in ('physics', 'chemistry'),
+        'fallback': False
     }
 
 
@@ -61,7 +62,8 @@ def fallback(query):
         'subject': 'none',
         'calculation': False,
         'concept': query,
-        'retrieval': True
+        'retrieval': True,
+        'fallback': True
     }
 
 
